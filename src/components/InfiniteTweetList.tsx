@@ -4,6 +4,7 @@ import Link from "next/link";
 import { VscHeart, VscHeartFilled } from "react-icons/vsc";
 import { useSession } from "next-auth/react";
 import { IconHoverEffect } from "./IconHoverEffect";
+import { api } from "~/utils/api";
 
 type Tweet = {
     id: string;
@@ -21,12 +22,12 @@ type Tweet = {
 type InfiniteTweetListProps = {
     isLoading: boolean;
     isError: boolean;
-    hasMore: boolean;
+    hasMore: boolean | undefined;
     fetchNewTweets: () => Promise<unknown>;
     tweets?: Tweet[];
 }
 
-export function InfiniteTweetList({ isLoading, isError, hasMore, fetchNewTweets, tweets }: InfiniteTweetListProps) {
+export function InfiniteTweetList({ isLoading, isError, hasMore = false, fetchNewTweets, tweets }: InfiniteTweetListProps) {
     if (isLoading) {
         return <div>Loading...</div>;
     }
@@ -43,7 +44,7 @@ export function InfiniteTweetList({ isLoading, isError, hasMore, fetchNewTweets,
                 dataLength={tweets.length}
                 next={fetchNewTweets}
                 hasMore={hasMore}
-                loader={"Loadign..."}>
+                loader={"Loading..."}>
                 {tweets.map((tweet) => {
                     return <TweetCard key={tweet.id} {...tweet} />;
                 })}
@@ -58,6 +59,51 @@ const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
 });
 
 function TweetCard({ id, user, content, createdAt, likeCount, likedByMe }: Tweet) {
+    const trpcUtils = api.useContext();
+    const toggleLike = api.tweet.toggleLike.useMutation({
+        onSuccess: ({ addedLike }) => {
+            const updateData: Parameters<typeof trpcUtils.tweet.infiniteFeed.setInfiniteData>[1] = (oldData) => {
+                if (oldData == null) return
+
+                const coundModifier = addedLike ? 1 : -1
+
+                return {
+                    ...oldData,
+                    pages: oldData.pages.map((page) => {
+                        return {
+                            ...page,
+                            tweets: page.tweets.map((tweet) => {
+                                if (tweet.id === id) {
+                                    return {
+                                        ...tweet,
+                                        likeCount: tweet.likeCount + coundModifier,
+                                        likedByMe: addedLike,
+                                    };
+                                }
+
+                                return tweet;
+                            }),
+                        };
+                    }),
+                };
+            };
+
+            trpcUtils.tweet.infiniteFeed.setInfiniteData({}, updateData);
+            trpcUtils.tweet.infiniteFeed.setInfiniteData(
+                { onlyFollowing: true },
+                updateData
+            );
+            trpcUtils.tweet.infiniteProfileFeed.setInfiniteData(
+                { userId: user.id },
+                updateData
+            );
+        },
+    });
+
+    function handleToggleLike() {
+        toggleLike.mutate({ id });
+    }
+
     return (
         <li className="flex gap-4 border-b px-4 py-4">
             <Link href={`/profiles/${user.id}`}>
@@ -73,18 +119,20 @@ function TweetCard({ id, user, content, createdAt, likeCount, likedByMe }: Tweet
                         {dateTimeFormatter.format(createdAt)}</span>
                 </div>
                 <p className="whitespace-pre-wrap">{content}</p>
-                <HeartButton likedByMe={likedByMe} likeCount={likeCount} />
+                <HeartButton onClick={handleToggleLike} isLoading={toggleLike.isLoading} likedByMe={likedByMe} likeCount={likeCount} />
             </div>
         </li>
     );
 }
 
 type HeartButtonProps = {
+    onClick: () => void;
+    isLoading: boolean;
     likedByMe: boolean;
     likeCount: number;
 }
 
-function HeartButton({ likedByMe, likeCount }: HeartButtonProps) {
+function HeartButton({ isLoading, onClick, likedByMe, likeCount }: HeartButtonProps) {
     const session = useSession();
     const HeartIcon = likedByMe ? VscHeartFilled : VscHeart;
 
@@ -98,6 +146,8 @@ function HeartButton({ likedByMe, likeCount }: HeartButtonProps) {
     }
     return (
         <button
+            disabled={isLoading}
+            onClick={onClick}
             className={`group -ml-2 flex items-center gap-1 self-start transition-colors duration-200 ${likedByMe
                 ? "text-red-500"
                 : "text-gray-500 hover:text-red-500 focus-visible:text-red-500"

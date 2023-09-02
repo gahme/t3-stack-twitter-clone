@@ -21,7 +21,7 @@ function RecentTweets() {
       isError={tweets.isError}
       isLoading={tweets.isLoading}
       hasMore={tweets.hasNextPage}
-      fetchNextPage={tweets.fetchNextPage}
+      fetchNewTweets={tweets.fetchNextPage}
     />
   );
 };
