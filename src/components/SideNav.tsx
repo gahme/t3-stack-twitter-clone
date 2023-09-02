@@ -1,4 +1,4 @@
-import { useSession } from "next-auth/react";
+import { signIn, signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 
 export function SideNav() {
@@ -13,7 +13,16 @@ export function SideNav() {
                 </li>
                 {user != null && (
                     <li className="w-full">
-                        <Link href={`/profiles/${user.id}`}>Profile</Link>
+                        {/* <Link href={`/profiles/${user.id}`}>Profile</Link> */}
+                    </li>
+                )}
+                {user == null ? (
+                    <li>
+                        <button onClick={() => void signIn}>Log In</button>
+                    </li>
+                ) : (
+                    <li>
+                        <button onClick={() => void signOut}>Log Out</button>
                     </li>
                 )}
             </ul>
