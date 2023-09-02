@@ -1,5 +1,7 @@
 import { type NextPage } from "next";
 import { NewTweetForm } from "~/components/NewTweetForm";
+import { InfiniteTweetList } from "~/components/InfiniteTweetList";
+import { api } from "~/utils/api";
 
 const Home: NextPage = () => {
   return <> {/* <> instead of () because we are returning multiple elements*/}
@@ -7,7 +9,21 @@ const Home: NextPage = () => {
       <h1 className="mb-2 px-4 text-lg font-bold">Home</h1>
     </header>
     <NewTweetForm />
+    <RecentTweets />
   </>
+};
+
+function RecentTweets() {
+  const tweets = api.tweet.infiniteFeed.useInfiniteQuery({}, { getNextPageParam: (lastPage) => lastPage.nextCursor });
+  return (
+    <InfiniteTweetList
+      tweets={tweets.data?.pages.flatMap((page) => page.tweets)}
+      isError={tweets.isError}
+      isLoading={tweets.isLoading}
+      hasMore={tweets.hasNextPage}
+      fetchNextPage={tweets.fetchNextPage}
+    />
+  );
 };
 
 export default Home;
