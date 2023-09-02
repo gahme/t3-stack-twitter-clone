@@ -1,5 +1,24 @@
 /** @type {import("eslint").Linter.Config} */
 const config = {
+  overrides: [
+    {
+      extends: [
+        "plugin:@typescript-eslint/recommended-requiring-type-checking",
+      ],
+      files: ["**/*.ts", "**/*.tsx"],
+      rules: {
+        // These opinionated rules are enabled in recommended-requiring-type-checking above.
+        // Feel free to reconfigure them to your own preference.
+        "@typescript-eslint/no-unsafe-assignment": "off",
+        "@typescript-eslint/no-unsafe-call": "off",
+        "@typescript-eslint/no-unsafe-member-access": "off",
+        "@typescript-eslint/no-unsafe-return": "off",
+      },
+      parserOptions: {
+        project: "./tsconfig.json",
+      },
+    },
+  ],
   parser: "@typescript-eslint/parser",
   parserOptions: {
     project: true,
